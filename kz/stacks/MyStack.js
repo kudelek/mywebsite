@@ -1,19 +1,36 @@
-import * as sst from "@serverless-stack/resources";
+import * as sst from "2serverless-stack/resources";
 
 export default class MyStack extends sst.Stack {
   constructor(scope, id, props) {
     super(scope, id, props);
 
-    // Create a HTTP API
+    // Create the table
+    const table = new sst.Table(this, "Counter", {
+      fields: {
+        counter: sst.TableFieldType.STRING,
+      },
+      primaryIndex: { partitionKey: "counter" },
+    });
+
+    // Create the HTTP API
     const api = new sst.Api(this, "Api", {
+      defaultFunctionProps: {
+        // Pass in the table name to our API
+        environment: {
+          tableName: table.dynamodbTable.tableName,
+        },
+      },
       routes: {
-        "GET /": "src/lambda.handler",
+        "POST /": "src/lambda.main",
       },
     });
 
-    // Show the endpoint in the output
+    // Allow the API to access the table
+    api.attachPermissions([table]);
+
+    // Show the API endpoint in the output
     this.addOutputs({
-      "ApiEndpoint": api.url,
+      ApiEndpoint: api.url,
     });
   }
 }
